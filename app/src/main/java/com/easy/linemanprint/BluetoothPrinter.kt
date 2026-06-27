@@ -63,6 +63,7 @@ object BluetoothPrinter {
                 os.write(byteArrayOf(0x1B, 0x40))            // ESC @ init
                 os.write(rasterize(bmp))                     // รูปใบเสร็จ
                 os.write(byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A)) // feed
+                os.write(byteArrayOf(0x1D, 0x56, 0x42, 0x00)) // GS V 66 0 = ตัดกระดาษ
                 os.flush()
                 Thread.sleep(400)                            // รอให้พิมพ์เสร็จก่อนปิด
             } finally {
