@@ -66,9 +66,10 @@ object BluetoothPrinter {
                 os.write(byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A, 0x0A))
                 os.write(byteArrayOf(0x1D, 0x56, 0x41, 0x18)) // GS V 65 24 = ป้อนกระดาษแล้วตัดเต็ม
                 os.flush()
-                // รอให้พิมพ์+ตัดจบจริงก่อนปิดสาย (สำคัญมาก ไม่งั้นคำสั่งตัดหลุด)
-                val waitMs = (bmp.height / 400.0 * 1000).toLong().coerceIn(900L, 4500L)
-                Thread.sleep(waitMs)
+                // ปรับสมการใหม่: ตีซะว่าเครื่องพิมพ์ทำงานช้าๆ ที่ 200 พิกเซล/วินาที เผื่อเวลาไว้เลย
+// ถอดการจำกัดเวลาสูงสุดออก เปลี่ยนเป็นรอขั้นต่ำ 2 วินาทีแทน (coerceAtLeast)
+                val waitMs = (bmp.height / 200.0 * 1000).toLong().coerceAtLeast(2000L)
+Thread.sleep(waitMs)
             } finally {
                 try { socket.close() } catch (_: Exception) {}
             }
