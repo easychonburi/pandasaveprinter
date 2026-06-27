@@ -58,7 +58,6 @@ object BluetoothPrinter {
         synchronized(lock) {
             val socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             try {
-                adapter.cancelDiscovery()
                 socket.connect()
                 val os = socket.outputStream
                 os.write(byteArrayOf(0x1B, 0x40))            // ESC @ init
