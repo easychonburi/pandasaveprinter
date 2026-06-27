@@ -62,10 +62,11 @@ object BluetoothPrinter {
                 val os = socket.outputStream
                 os.write(byteArrayOf(0x1B, 0x40))            // ESC @ init
                 os.write(rasterize(bmp))                     // รูปใบเสร็จ
-                os.write(byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A)) // feed
-                os.write(byteArrayOf(0x1D, 0x56, 0x42, 0x00)) // GS V 66 0 = ตัดกระดาษ
+                // feed เยอะ ดันเนื้อหาพ้นหัวตัด + เครื่องที่ตัดไม่ได้จะมีกระดาษยื่นให้ฉีกพอดี
+                os.write(byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A))
+                os.write(byteArrayOf(0x1D, 0x56, 0x00))      // GS V 0 = ตัดเต็ม (มาตรฐานสุด)
                 os.flush()
-                Thread.sleep(400)                            // รอให้พิมพ์เสร็จก่อนปิด
+                Thread.sleep(500)                            // รอให้พิมพ์/ตัดเสร็จก่อนปิด
             } finally {
                 try { socket.close() } catch (_: Exception) {}
             }

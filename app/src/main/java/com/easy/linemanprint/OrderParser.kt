@@ -90,7 +90,8 @@ object OrderParser {
                 } else if (items.isNotEmpty()) {
                     // บรรทัดที่ไม่ใช่ header -> เป็นตัวเลือก/ขนาดของเมนูล่าสุด
                     if (!line.contains("ราคา") && !line.contains("รายการสั่งซื้อ") &&
-                        !line.contains("แก้ไขรายการ") && line.length <= 60) {
+                        !line.contains("แก้ไขรายการ") && !line.contains("ช้อนส้อม") &&
+                        !line.contains("ไม่รับช้อน") && line.length <= 60) {
                         items.last().options.add(line)
                     }
                 }

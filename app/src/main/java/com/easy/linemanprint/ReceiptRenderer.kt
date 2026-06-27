@@ -12,17 +12,17 @@ import android.graphics.Typeface
 object ReceiptRenderer {
 
     private const val WIDTH = 384
-    private const val PAD = 8
+    private const val PAD = 4
 
     // ===== ข้อความท้ายใบ (แก้ตรงนี้ได้เลยถ้าอยากเปลี่ยนคำ) =====
     private const val CTA_LINE1 = "สแกนเพื่อแอดไลน์"
     private const val CTA_LINE2 = "อัพเดทโปรโมชั่นก่อนใคร"
 
     private val pNormal = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 24f; typeface = Typeface.DEFAULT
+        color = Color.BLACK; textSize = 27f; typeface = Typeface.DEFAULT
     }
     private val pBold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 26f; typeface = Typeface.DEFAULT_BOLD
+        color = Color.BLACK; textSize = 34f; typeface = Typeface.DEFAULT_BOLD
     }
     private val pHeader = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK; textSize = 36f; typeface = Typeface.DEFAULT_BOLD
