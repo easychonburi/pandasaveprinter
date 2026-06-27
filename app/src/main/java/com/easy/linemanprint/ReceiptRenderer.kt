@@ -8,48 +8,40 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 
-// วาดใบเสร็จเป็น "รูปภาพ" เพื่อให้ภาษาไทยไม่เพี้ยน (กว้าง 384px = กระดาษ 58 มม.)
+// วาดใบเสร็จเป็น "รูปภาพ" (กว้าง 384px = 58 มม.) ออกแบบให้คนหน้าครัวอ่านเร็ว
 object ReceiptRenderer {
 
     private const val WIDTH = 384
     private const val PAD = 4
 
-    // ===== ข้อความท้ายใบ (แก้ตรงนี้ได้เลยถ้าอยากเปลี่ยนคำ) =====
+    // ===== ข้อความท้ายใบ (แก้ได้) =====
     private const val CTA_LINE1 = "สแกนเพื่อแอดไลน์"
     private const val CTA_LINE2 = "อัพเดทโปรโมชั่นก่อนใคร"
 
-    private val pNormal = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 27f; typeface = Typeface.DEFAULT
-    }
-    private val pBold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 34f; typeface = Typeface.DEFAULT_BOLD
-    }
-    private val pHeader = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 36f; typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-    private val pSub = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 24f; typeface = Typeface.DEFAULT
-        textAlign = Paint.Align.CENTER
-    }
-    // เลขออเดอร์ตัวใหญ่สุด
-    private val pHuge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 110f; typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-    private val pCta = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 26f; typeface = Typeface.DEFAULT_BOLD
-        textAlign = Paint.Align.CENTER
-    }
-    private val pSmall = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK; textSize = 21f; typeface = Typeface.DEFAULT
-    }
+    private fun p(size: Float, bold: Boolean = false, center: Boolean = false) =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.BLACK
+            textSize = size
+            typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            if (center) textAlign = Paint.Align.CENTER
+        }
+
+    private val pHeader = p(38f, bold = true, center = true)   // ชื่อร้าน
+    private val pSub = p(23f, center = true)                   // สาขา / LINE MAN / เวลา
+    private val pHuge = p(110f, bold = true, center = true)    // เลขออเดอร์ ใหญ่สุด
+    private val pItem = p(40f, bold = true)                    // ★ เมนู + จำนวน เด่นสุด
+    private val pOptVal = p(33f, bold = true)                  // ★ ท็อปปิ้ง/ขนาด ที่เลือก
+    private val pOptLabel = p(25f)                             // หัวข้อตัวเลือก (ขนาด/ท็อปปิ้ง)
+    private val pNote = p(22f)                                 // โน้ตเล็กๆ (ช้อนส้อม ฯลฯ)
+    private val pSmall = p(21f)                                // lmf / ยอดเงิน
+    private val pNet = p(26f, bold = true)                     // ยอดสุทธิ
+    private val pCta = p(26f, bold = true, center = true)
     private val pImg = Paint().apply { isAntiAlias = false; isFilterBitmap = false }
 
-    // องค์ประกอบในใบ: เป็นข้อความ หรือ รูป
     private sealed class El
     private data class TextEl(val text: String, val paint: Paint, val center: Boolean = false) : El()
     private data class ImgEl(val bmp: Bitmap) : El()
+    private data class Gap(val px: Int) : El()
 
     private fun wrap(text: String, paint: Paint, maxW: Int): List<String> {
         if (text.isBlank()) return listOf("")
@@ -77,14 +69,12 @@ object ReceiptRenderer {
         return out
     }
 
-    private fun divider() = TextEl("--------------------------------", pSmall)
-
-    // ลดขนาดฟอนต์ถ้าข้อความกว้างเกินกระดาษ (ใช้กับเลขออเดอร์ตัวใหญ่)
+    private fun line(ch: String) = TextEl(ch.repeat(32), pSmall)
     private fun fit(text: String, base: Paint, maxW: Int): Paint {
         if (base.measureText(text) <= maxW) return base
-        val p = Paint(base)
-        while (p.textSize > 30f && p.measureText(text) > maxW) p.textSize -= 4f
-        return p
+        val q = Paint(base)
+        while (q.textSize > 30f && q.measureText(text) > maxW) q.textSize -= 4f
+        return q
     }
 
     fun render(context: Context, order: Order): Bitmap =
@@ -95,38 +85,48 @@ object ReceiptRenderer {
     } catch (_: Exception) { null }
 
     private fun renderFull(context: Context, o: Order): Bitmap {
+        val maxW = WIDTH - 2 * PAD
         val els = ArrayList<El>()
-        // หัวใบ
+
+        // --- หัวใบ ---
         els.add(TextEl("EASY หมี่ไก่ฉีก", pHeader, true))
-        if (o.branch.isNotEmpty()) els.add(TextEl("สาขา ${o.branch}", pSub, true))
-        els.add(TextEl("LINE MAN", pSub, true))
-        els.add(divider())
-        // เลขออเดอร์ตัวใหญ่สุด
+        val sub = buildString {
+            append("LINE MAN")
+            if (o.branch.isNotEmpty()) append("  ·  สาขา ${o.branch}")
+        }
+        els.add(TextEl(sub, pSub, true))
+        els.add(line("="))
+
+        // --- เลขออเดอร์ ใหญ่สุด ---
         val tag = "#${o.orderNo}"
-        els.add(TextEl(tag, fit(tag, pHuge, WIDTH - 2 * PAD), true))
-        els.add(divider())
-        // รายละเอียดออเดอร์
+        els.add(TextEl(tag, fit(tag, pHuge, maxW), true))
+        if (o.dateTime.isNotEmpty()) els.add(TextEl(o.dateTime, pSub, true))
+        els.add(line("="))
+
+        // --- ★ รายการอาหาร เด่นสุด ---
+        for ((i, it) in o.items.withIndex()) {
+            if (i > 0) { els.add(Gap(6)); els.add(TextEl("- - - - - - - - - -", pSmall, true)); els.add(Gap(6)) }
+            for (w in wrap("${it.qty} x ${it.name}", pItem, maxW)) els.add(TextEl(w, pItem))
+            for (op in it.options) {
+                val t = op.trim()
+                val isValue = t.startsWith("•") || t.startsWith("-")
+                val clean = t.trimStart('•', '-', ' ')
+                if (isValue) for (w in wrap("    ▸ $clean", pOptVal, maxW)) els.add(TextEl(w, pOptVal))
+                else for (w in wrap("  $clean", pOptLabel, maxW)) els.add(TextEl(w, pOptLabel))
+            }
+        }
+        els.add(line("="))
+
+        // --- โน้ตเล็กๆ + ยอดเงิน (ข้อมูลรอง) ---
+        if (o.note.isNotEmpty()) els.add(TextEl(o.note, pNote))
+        if (o.subtotal.isNotEmpty()) els.add(TextEl("รวม          ${o.subtotal}", pSmall))
+        if (o.discount.isNotEmpty()) els.add(TextEl("ส่วนลดร้าน   ${o.discount}", pSmall))
+        if (o.net.isNotEmpty()) els.add(TextEl("สุทธิ  ${o.net}", pNet))
+        if (o.payment.isNotEmpty()) els.add(TextEl("ชำระ: ${o.payment}", pSmall))
         if (o.lmfCode.isNotEmpty()) els.add(TextEl(o.lmfCode, pSmall))
-        if (o.dateTime.isNotEmpty()) els.add(TextEl(o.dateTime, pSmall))
-        els.add(divider())
-        for (it in o.items) {
-            for (w in wrap("${it.qty}x ${it.name}", pBold, WIDTH - 2 * PAD)) els.add(TextEl(w, pBold))
-            for (op in it.options)
-                for (w in wrap("  - $op", pNormal, WIDTH - 2 * PAD)) els.add(TextEl(w, pNormal))
-        }
-        if (o.note.isNotEmpty())
-            for (w in wrap("* ${o.note}", pBold, WIDTH - 2 * PAD)) els.add(TextEl(w, pBold))
-        els.add(divider())
-        if (o.subtotal.isNotEmpty()) els.add(TextEl("รวม          ${o.subtotal}", pNormal))
-        if (o.discount.isNotEmpty()) els.add(TextEl("ส่วนลดร้าน   ${o.discount}", pNormal))
-        if (o.net.isNotEmpty()) els.add(TextEl("สุทธิ         ${o.net}", pBold))
-        if (o.payment.isNotEmpty()) els.add(TextEl("ชำระ: ${o.payment}", pNormal))
-        if (o.customer.isNotEmpty()) {
-            val ct = if (o.isNewCustomer) "ลูกค้าใหม่ : ${o.customer}" else o.customer
-            els.add(TextEl(ct, pNormal))
-        }
-        // ท้ายใบ: QR + ชวนแอดไลน์
-        els.add(divider())
+
+        // --- ท้ายใบ: QR + ชวนแอดไลน์ ---
+        els.add(line("-"))
         loadQr(context)?.let { els.add(ImgEl(it)) }
         els.add(TextEl(CTA_LINE1, pCta, true))
         els.add(TextEl(CTA_LINE2, pCta, true))
@@ -134,60 +134,48 @@ object ReceiptRenderer {
     }
 
     private fun renderFallback(o: Order): Bitmap {
+        val maxW = WIDTH - 2 * PAD
         val els = ArrayList<El>()
         els.add(TextEl("EASY หมี่ไก่ฉีก", pHeader, true))
-        els.add(TextEl("*** ออเดอร์ใหม่ ***", pBold, true))
-        els.add(divider())
+        els.add(TextEl("*** ออเดอร์ใหม่ ***", pCta, true))
+        els.add(line("="))
         val tag = if (o.orderNo.isNotEmpty()) "#${o.orderNo}" else "#????"
-        els.add(TextEl(tag, fit(tag, pHuge, WIDTH - 2 * PAD), true))
-        els.add(divider())
-        if (o.lmfCode.isNotEmpty()) els.add(TextEl(o.lmfCode, pSmall))
-        if (o.branch.isNotEmpty()) els.add(TextEl("สาขา ${o.branch}", pNormal))
-        els.add(divider())
-        els.add(TextEl("อ่านรายละเอียดไม่ครบ", pBold))
-        els.add(TextEl(">> เปิดแอพดูออเดอร์ <<", pBold))
-        els.add(divider())
+        els.add(TextEl(tag, fit(tag, pHuge, maxW), true))
+        els.add(line("="))
+        if (o.branch.isNotEmpty()) els.add(TextEl("สาขา ${o.branch}", pItem))
+        els.add(Gap(8))
+        els.add(TextEl("อ่านรายละเอียดไม่ครบ", pItem))
+        els.add(TextEl(">> เปิดแอพดูออเดอร์ <<", pItem))
+        if (o.lmfCode.isNotEmpty()) { els.add(Gap(8)); els.add(TextEl(o.lmfCode, pSmall)) }
+        els.add(line("-"))
         return draw(els)
     }
 
     private fun draw(els: List<El>): Bitmap {
         var h = PAD
-        for (e in els) {
-            h += when (e) {
-                is TextEl -> {
-                    val fm = e.paint.fontMetrics
-                    (fm.descent - fm.ascent + 6).toInt()
-                }
-                is ImgEl -> e.bmp.height + 10
-            }
+        for (e in els) h += when (e) {
+            is TextEl -> { val fm = e.paint.fontMetrics; (fm.descent - fm.ascent + 6).toInt() }
+            is ImgEl -> e.bmp.height + 12
+            is Gap -> e.px
         }
-        h += PAD + 40 // feed ท้ายบิล
+        h += PAD + 60 // เว้นล่างในรูป
 
         val bmp = Bitmap.createBitmap(WIDTH, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawColor(Color.WHITE)
         var y = PAD.toFloat()
-        for (e in els) {
-            when (e) {
-                is TextEl -> {
-                    val fm = e.paint.fontMetrics
-                    y += -fm.ascent
-                    if (e.center) {
-                        if (e.paint.textAlign == Paint.Align.CENTER)
-                            c.drawText(e.text, WIDTH / 2f, y, e.paint)
-                        else {
-                            val w = e.paint.measureText(e.text)
-                            c.drawText(e.text, (WIDTH - w) / 2f, y, e.paint)
-                        }
-                    } else c.drawText(e.text, PAD.toFloat(), y, e.paint)
-                    y += fm.descent + 6
-                }
-                is ImgEl -> {
-                    val left = (WIDTH - e.bmp.width) / 2f
-                    c.drawBitmap(e.bmp, left, y + 5f, pImg)
-                    y += e.bmp.height + 10
-                }
+        for (e in els) when (e) {
+            is TextEl -> {
+                val fm = e.paint.fontMetrics
+                y += -fm.ascent
+                if (e.center) {
+                    if (e.paint.textAlign == Paint.Align.CENTER) c.drawText(e.text, WIDTH / 2f, y, e.paint)
+                    else { val w = e.paint.measureText(e.text); c.drawText(e.text, (WIDTH - w) / 2f, y, e.paint) }
+                } else c.drawText(e.text, PAD.toFloat(), y, e.paint)
+                y += fm.descent + 6
             }
+            is ImgEl -> { c.drawBitmap(e.bmp, (WIDTH - e.bmp.width) / 2f, y + 6f, pImg); y += e.bmp.height + 12 }
+            is Gap -> y += e.px
         }
         return bmp
     }
