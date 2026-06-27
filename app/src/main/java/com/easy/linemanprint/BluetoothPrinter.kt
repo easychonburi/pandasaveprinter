@@ -61,9 +61,10 @@ object BluetoothPrinter {
                 socket.connect()
                 val os = socket.outputStream
                 os.write(byteArrayOf(0x1B, 0x40))            // ESC @ init
+                os.write(byteArrayOf(0x0A))                  // << เพิ่มบรรทัดนี้เพื่อเว้นด้านบนสุด 1 บรรทัด
                 os.write(rasterize(bmp))                     // รูปใบเสร็จ
                 // เว้นพื้นที่ด้านล่างให้กระดาษยื่นออกมา (เครื่องไม่ตัดก็ฉีกได้พอดี)
-                os.write(byteArrayOf(0x0A, 0x0A, 0x0A, 0x0A, 0x0A))
+                os.write(byteArrayOf(0x0A, 0x0A, 0x0A))
                 os.write(byteArrayOf(0x1D, 0x56, 0x41, 0x18)) // GS V 65 24 = ป้อนกระดาษแล้วตัดเต็ม
                 os.flush()
                 // ปรับสมการใหม่: ตีซะว่าเครื่องพิมพ์ทำงานช้าๆ ที่ 200 พิกเซล/วินาที เผื่อเวลาไว้เลย
