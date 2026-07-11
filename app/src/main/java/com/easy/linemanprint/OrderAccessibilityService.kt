@@ -18,6 +18,7 @@ class OrderAccessibilityService : AccessibilityService() {
     @Volatile private var lastSig = ""
 
     private val lmfMarker = Regex("LMF-\\d{6}")
+    private val grabMarker = Regex("GF-\\d{3,}")
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val root = rootInActiveWindow ?: return
@@ -28,13 +29,24 @@ class OrderAccessibilityService : AccessibilityService() {
         try { collect(root, nodes) } catch (_: Exception) { return }
 
         val joined = nodes.joinToString("|") { it.text }
-        // เป็นหน้ารายละเอียดออเดอร์หรือไม่
-        val isDetail = joined.contains("รหัสใบสั่งซื้อ") ||
+
+        // เลือกตัวอ่านตามแอปที่เจอบนหน้าจอ + เช็คสวิตช์ว่าเปิดแอปนั้นไว้ไหม
+        val order = when {
+            // LINE MAN (WMA) — ทำงานเฉพาะเมื่อเปิดสวิตช์ไว้
+            Prefs.isLinemanOn(this) && (
+                joined.contains("รหัสใบสั่งซื้อ") ||
                 joined.contains("รายการสั่งซื้อ") ||
                 lmfMarker.containsMatchIn(joined)
-        if (!isDetail) return
+            ) -> OrderParser.parse(nodes)
 
-        val order = OrderParser.parse(nodes)
+            // Grab (GrabFood) — เจอเลข GF-xxx + มียอดรวม และเปิดสวิตช์ไว้
+            Prefs.isGrabOn(this) &&
+            grabMarker.containsMatchIn(joined) &&
+            joined.contains("รวมทั้งหมด") -> GrabOrderParser.parse(nodes)
+
+            else -> return   // ไม่ใช่หน้าออเดอร์ที่เรารู้จัก / หรือปิดสวิตช์ไว้
+        }
+
         val sig = order.lmfCode.ifEmpty { order.orderNo }
         if (sig.isEmpty()) return
         if (sig == lastSig) return                       // กันยิงซ้ำรัวๆ
