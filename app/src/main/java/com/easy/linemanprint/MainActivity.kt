@@ -120,28 +120,29 @@ class MainActivity : AppCompatActivity() {
         refreshStatus()
     }
 
-    private fun testPrint() {
+private fun testPrint() {
         val sample = Order(
-            orderNo = "4561",
-            lmfCode = "LMF-260627-684004561",
-            branch = "อ่าวอุดม",
-            dateTime = "27 มิ.ย. 69, 17:38",
-            customer = "บิว",
+            orderNo = "9999",
+            lmfCode = "",
+            branch = "",
+            dateTime = "",
+            customer = "ลูกค้าตัวอย่าง",
             isNewCustomer = true,
             items = listOf(
-                OrderItem(2, "หมี่ไก่ฉีก สูตรดั้งเดิม (แถมน้ำพริกหมูกระจก)", "158.00",
-                    mutableListOf("ขนาด: กลาง"))
+                OrderItem(1, "เมนูตัวอย่าง A", "100.00",
+                    mutableListOf("ขนาด: กลาง")),
+                OrderItem(2, "เมนูตัวอย่าง B", "50.00")
             ),
-            note = "ไม่รับช้อนส้อมพลาสติก",
-            payment = "E-Payment",
-            subtotal = "158.00",
-            discount = "-40.00",
-            net = "118.00",
+            note = "ทดสอบพิมพ์",
+            payment = "",
+            subtotal = "200.00",
+            discount = "",
+            net = "200.00",
             parsedOk = true
         )
         printInBg(sample)
     }
-
+    
     private fun reprint() {
         val o = LastOrder.value
         if (o == null) { toast("ยังไม่มีออเดอร์ล่าสุด"); return }
