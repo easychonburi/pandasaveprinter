@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">EASY LINE MAN Print</string>
-    <string name="service_label">EASY พิมพ์ออเดอร์ LINE MAN</string>
-    <string name="service_desc">อ่านหน้าออเดอร์ใน Wongnai Merchant App แล้วพิมพ์ใบเสร็จออกเครื่องพิมพ์บลูทูธอัตโนมัติ (อ่านเฉพาะแอพ WMA เท่านั้น)</string>
+    <string name="app_name">Panda Printer</string>
+    <string name="service_label">Panda Printer - พิมพ์ออเดอร์อัตโนมัติ</string>
+    <string name="service_desc">อ่านหน้าออเดอร์จากแอปเดลิเวอรี (LINE MAN, Grab) แล้วพิมพ์ใบเสร็จออกเครื่องพิมพ์บลูทูธอัตโนมัติ</string>
 </resources>
