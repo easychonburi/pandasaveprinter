@@ -51,27 +51,31 @@ object GrabOrderParser {
         val orderNo = gf.removePrefix("GF-")
 
         // ===== โหมดสอดแนม: พิมพ์บรรทัดที่อ่านเห็นออกมาเป็นใบ (จำกัด 35 บรรทัด กันใบยาวเกิน) =====
-        if (DEBUG) {
+      if (DEBUG) {
+            val sorted = nodes.sortedWith(compareBy({ it.top }, { it.left }))
+            val hasWeb = nodes.any { it.cls.contains("Web", true) }
+            val hasFlutter = nodes.any {
+                it.cls.contains("Flutter", true) || it.cls.contains("Compose", true) ||
+                it.cls.contains("Surface", true)
+            }
             val dbg = ArrayList<OrderItem>()
-            for ((i, ln) in lines.withIndex()) {
-                if (i >= 35) break
-                dbg.add(OrderItem(i + 1, ln.take(38), ""))   // ตัดให้สั้นกันล้นบรรทัด
+            for ((i, n) in sorted.withIndex()) {
+                if (i >= 28) break
+                val tag = if (n.cls.isNotEmpty()) "[${n.cls}]" else ""
+                dbg.add(OrderItem(i + 1, "$tag ${n.text}".take(40), ""))
+            }
+            val verdict = when {
+                hasWeb -> "พบ WebView (มีลุ้น!)"
+                hasFlutter -> "พบ Flutter/Canvas (ยาก)"
+                else -> "ไม่พบ container พิเศษ"
             }
             return Order(
                 orderNo = orderNo.ifEmpty { "DBG" },
-                lmfCode = gf,
-                branch = "",
-                dateTime = "",
-                customer = "",
-                isNewCustomer = false,
-                items = dbg,
-                note = "*** DEBUG: บรรทัดที่แอปอ่านได้ ***",
-                payment = "",
-                subtotal = "",
-                discount = "",
-                net = "",
-                parsedOk = true,
-                platform = "GRAB-DEBUG"
+                lmfCode = gf, branch = "", dateTime = "", customer = "",
+                isNewCustomer = false, items = dbg,
+                note = "*** $verdict ***",
+                payment = "", subtotal = "", discount = "", net = "",
+                parsedOk = true, platform = "GRAB-DEBUG2"
             )
         }
         // ===== โหมดปกติ (ยังไม่ใช้รอบนี้) =====
