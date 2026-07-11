@@ -70,13 +70,18 @@ class OrderAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun collect(node: AccessibilityNodeInfo?, out: ArrayList<NodeText>) {
+   private fun collect(node: AccessibilityNodeInfo?, out: ArrayList<NodeText>) {
         if (node == null) return
         val txt = (node.text ?: node.contentDescription)?.toString()?.trim()
+        val cls = node.className?.toString()?.substringAfterLast('.') ?: ""
+        val r = Rect()
+        node.getBoundsInScreen(r)
         if (!txt.isNullOrEmpty()) {
-            val r = Rect()
-            node.getBoundsInScreen(r)
-            out.add(NodeText(txt, r.left, r.top))
+            out.add(NodeText(txt, r.left, r.top, cls))
+        } else if (cls.contains("Web", true) || cls.contains("Flutter", true) ||
+                   cls.contains("Compose", true) || cls.contains("Surface", true)) {
+            // มาร์ก container ที่อาจซ่อนรายการอาหารไว้ (แม้ไม่มีตัวหนังสือ)
+            out.add(NodeText("[$cls]", r.left, r.top, cls))
         }
         for (i in 0 until node.childCount) collect(node.getChild(i), out)
     }
