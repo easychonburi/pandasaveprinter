@@ -17,6 +17,14 @@ class OrderAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var lastSig = ""
 
+    // Grab มักส่ง Accessibility event ก่อนที่ส่วนรายการอาหารจะวาดเสร็จ
+    // จึงต้องรอและอ่าน root ใหม่ แทนการใช้ node ชุดแรกทันที
+    private val grabReadDelayMs = 1_200L
+    private val grabRetryDelayMs = 800L
+    private val grabMaxAttempts = 3
+    private var pendingGrabCode = ""
+    private var grabReadScheduled = false
+
     private val lmfMarker = Regex("LMF-\\d{6}")
     private val grabMarker = Regex("GF-\\d{3,}")
 
@@ -29,28 +37,84 @@ class OrderAccessibilityService : AccessibilityService() {
         try { collect(root, nodes) } catch (_: Exception) { return }
 
         val joined = nodes.joinToString("|") { it.text }
-        // debug v3: log จำนวน node ที่เจอทั้งหมด (ดูใน toast)
-        if (Prefs.isGrabOn(this) && grabMarker.containsMatchIn(joined)) {
-            toast("Grab: เจอ ${nodes.size} nodes")
-        }
-
         // เลือกตัวอ่านตามแอปที่เจอบนหน้าจอ + เช็คสวิตช์ว่าเปิดแอปนั้นไว้ไหม
-        val order = when {
+        when {
             // LINE MAN (WMA) — ทำงานเฉพาะเมื่อเปิดสวิตช์ไว้
             Prefs.isLinemanOn(this) && (
                 joined.contains("รหัสใบสั่งซื้อ") ||
                 joined.contains("รายการสั่งซื้อ") ||
                 lmfMarker.containsMatchIn(joined)
-            ) -> OrderParser.parse(nodes)
+            ) -> processOrder(OrderParser.parse(nodes))
 
-            // Grab (GrabFood) — เจอเลข GF-xxx + มียอดรวม และเปิดสวิตช์ไว้
+            // Grab: อย่า parse ทันที เพราะตอน event แรกมักยังไม่มีรายการอาหาร
             Prefs.isGrabOn(this) &&
             grabMarker.containsMatchIn(joined) &&
-            joined.contains("รวมทั้งหมด") -> GrabOrderParser.parse(nodes)
+            joined.contains("รวมทั้งหมด") -> {
+                val grabCode = grabMarker.find(joined)?.value ?: return
+                scheduleGrabRead(grabCode)
+            }
 
-            else -> return   // ไม่ใช่หน้าออเดอร์ที่เรารู้จัก / หรือปิดสวิตช์ไว้
+            else -> return // ไม่ใช่หน้าออเดอร์ที่เรารู้จัก / หรือปิดสวิตช์ไว้
+        }
+    }
+
+    // จองการอ่าน Grab ครั้งเดียวต่อหนึ่งออเดอร์ เพื่อไม่ให้ content-change event
+    // ที่ยิงถี่ ๆ ทำให้เลื่อนเวลารอออกไปเรื่อย ๆ
+    private fun scheduleGrabRead(grabCode: String) {
+        if (grabCode == pendingGrabCode && grabReadScheduled) return
+
+        pendingGrabCode = grabCode
+        grabReadScheduled = true
+        main.postDelayed({ readGrabWhenReady(grabCode, 1) }, grabReadDelayMs)
+    }
+
+    private fun readGrabWhenReady(expectedCode: String, attempt: Int) {
+        // ผู้ใช้อาจออกจากหน้าออเดอร์ไปแล้วระหว่างที่รอ
+        if (expectedCode != pendingGrabCode) return
+
+        val root = rootInActiveWindow
+        if (root == null) {
+            retryGrabRead(expectedCode, attempt)
+            return
         }
 
+        val nodes = ArrayList<NodeText>()
+        try { collect(root, nodes) } catch (_: Exception) {
+            retryGrabRead(expectedCode, attempt)
+            return
+        }
+
+        val joined = nodes.joinToString("|") { it.text }
+        if (!joined.contains(expectedCode)) {
+            // หน้าเปลี่ยนแล้ว จบการรอโดยไม่พิมพ์และไม่ mark ว่าออเดอร์นี้เสร็จ
+            pendingGrabCode = ""
+            grabReadScheduled = false
+            return
+        }
+
+        if (!hasReadableGrabItem(nodes) && attempt < grabMaxAttempts) {
+            retryGrabRead(expectedCode, attempt)
+            return
+        }
+
+        pendingGrabCode = ""
+        grabReadScheduled = false
+        toast("Grab: อ่านรอบ $attempt พบ ${nodes.size} nodes")
+        processOrder(GrabOrderParser.parse(nodes))
+    }
+
+    private fun retryGrabRead(grabCode: String, attempt: Int) {
+        if (grabCode != pendingGrabCode) return
+        main.postDelayed({ readGrabWhenReady(grabCode, attempt + 1) }, grabRetryDelayMs)
+    }
+
+    // รองรับทั้ง node ปกติและ node ที่ collector ใส่ T:/D: ไว้ด้านหน้า
+    private fun hasReadableGrabItem(nodes: List<NodeText>): Boolean = nodes.any { node ->
+        val text = node.text.removePrefix("T:").removePrefix("D:").trim()
+        Regex("^\\d+\\s*[xX×]\\s*.+").containsMatchIn(text)
+    }
+
+    private fun processOrder(order: Order) {
         val sig = order.lmfCode.ifEmpty { order.orderNo }
         if (sig.isEmpty()) return
         if (sig == lastSig) return                       // กันยิงซ้ำรัวๆ
