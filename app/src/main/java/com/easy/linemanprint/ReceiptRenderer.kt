@@ -14,9 +14,10 @@ object ReceiptRenderer {
     private const val WIDTH = 384
     private const val PAD = 4
 
-    // ===== ข้อความท้ายใบ (แก้ได้) =====
-    private const val CTA_LINE1 = "สแกนเพื่อแอดไลน์"
-    private const val CTA_LINE2 = "อัพเดทโปรโมชั่นก่อนใคร"
+    // ===== ค่าเริ่มต้น (กลางๆ ไม่ผูกกับร้านใด) — ลูกค้าจะตั้งทับเองในหน้าตั้งค่าบิลภายหลัง =====
+    private const val DEFAULT_SHOP = "Panda Printer"
+    private const val CTA_LINE1 = "ขอบคุณที่ใช้บริการ"
+    private const val CTA_LINE2 = ""
 
     private fun p(size: Float, bold: Boolean = false, center: Boolean = false) =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -80,18 +81,18 @@ object ReceiptRenderer {
     fun render(context: Context, order: Order): Bitmap =
         if (order.parsedOk) renderFull(context, order) else renderFallback(order)
 
-    private fun loadQr(context: Context): Bitmap? = try {
-        BitmapFactory.decodeResource(context.resources, R.drawable.line_qr)
-    } catch (_: Exception) { null }
+    // ค่าเริ่มต้น: ไม่โหลด QR ใดๆ (กันไม่ให้ QR ร้านเดิมหลุดออกใบ)
+    // ภายหลังเมื่อทำหน้าตั้งค่าบิล ค่อยให้โหลด QR ที่ลูกค้าอัปโหลดเองจาก Prefs
+    private fun loadQr(context: Context): Bitmap? = null
 
     private fun renderFull(context: Context, o: Order): Bitmap {
         val maxW = WIDTH - 2 * PAD
         val els = ArrayList<El>()
 
         // --- หัวใบ ---
-        els.add(TextEl("EASY หมี่ไก่ฉีก", pHeader, true))
+        els.add(TextEl(DEFAULT_SHOP, pHeader, true))
         val sub = buildString {
-            append(o.platform)                                   // << โชว์ LINE MAN หรือ GRAB ตามต้นทาง
+            append(o.platform)                                   // โชว์ LINE MAN หรือ GRAB ตามต้นทาง
             if (o.branch.isNotEmpty()) append("  ·  สาขา ${o.branch}")
         }
         els.add(TextEl(sub, pSub, true))
@@ -125,18 +126,18 @@ object ReceiptRenderer {
         if (o.payment.isNotEmpty()) els.add(TextEl("ชำระ: ${o.payment}", pSmall))
         if (o.lmfCode.isNotEmpty()) els.add(TextEl(o.lmfCode, pSmall))
 
-        // --- ท้ายใบ: QR + ชวนแอดไลน์ ---
+        // --- ท้ายใบ ---
         els.add(line("-"))
         loadQr(context)?.let { els.add(ImgEl(it)) }
-        els.add(TextEl(CTA_LINE1, pCta, true))
-        els.add(TextEl(CTA_LINE2, pCta, true))
+        if (CTA_LINE1.isNotEmpty()) els.add(TextEl(CTA_LINE1, pCta, true))
+        if (CTA_LINE2.isNotEmpty()) els.add(TextEl(CTA_LINE2, pCta, true))
         return draw(els)
     }
 
     private fun renderFallback(o: Order): Bitmap {
         val maxW = WIDTH - 2 * PAD
         val els = ArrayList<El>()
-        els.add(TextEl("EASY หมี่ไก่ฉีก", pHeader, true))
+        els.add(TextEl(DEFAULT_SHOP, pHeader, true))
         els.add(TextEl("*** ออเดอร์ใหม่ ***", pCta, true))
         els.add(line("="))
         val tag = if (o.orderNo.isNotEmpty()) "#${o.orderNo}" else "#????"
