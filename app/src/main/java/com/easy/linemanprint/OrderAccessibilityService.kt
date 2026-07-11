@@ -25,13 +25,8 @@ class OrderAccessibilityService : AccessibilityService() {
         val pkg = root.packageName?.toString() ?: ""
         if (pkg == packageName) return   // ข้ามแอพตัวเอง
 
-        Thread.sleep(800)
-
-val root2 = rootInActiveWindow ?: return
-
-val nodes = ArrayList<NodeText>()
-
-collect(root2, nodes) } catch (_: Exception) { return }
+        val nodes = ArrayList<NodeText>()
+        try { collect(root, nodes) } catch (_: Exception) { return }
 
         val joined = nodes.joinToString("|") { it.text }
         // debug v3: log จำนวน node ที่เจอทั้งหมด (ดูใน toast)
