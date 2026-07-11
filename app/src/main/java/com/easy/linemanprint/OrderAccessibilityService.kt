@@ -29,6 +29,10 @@ class OrderAccessibilityService : AccessibilityService() {
         try { collect(root, nodes) } catch (_: Exception) { return }
 
         val joined = nodes.joinToString("|") { it.text }
+        // debug v3: log จำนวน node ที่เจอทั้งหมด (ดูใน toast)
+        if (Prefs.isGrabOn(this) && grabMarker.containsMatchIn(joined)) {
+            toast("Grab: เจอ ${nodes.size} nodes")
+        }
 
         // เลือกตัวอ่านตามแอปที่เจอบนหน้าจอ + เช็คสวิตช์ว่าเปิดแอปนั้นไว้ไหม
         val order = when {
@@ -72,16 +76,21 @@ class OrderAccessibilityService : AccessibilityService() {
 
    private fun collect(node: AccessibilityNodeInfo?, out: ArrayList<NodeText>) {
         if (node == null) return
-        val txt = (node.text ?: node.contentDescription)?.toString()?.trim()
         val cls = node.className?.toString()?.substringAfterLast('.') ?: ""
         val r = Rect()
         node.getBoundsInScreen(r)
-        if (!txt.isNullOrEmpty()) {
-            out.add(NodeText(txt, r.left, r.top, cls))
-        } else if (cls.contains("Web", true) || cls.contains("Flutter", true) ||
-                   cls.contains("Compose", true) || cls.contains("Surface", true)) {
-            // มาร์ก container ที่อาจซ่อนรายการอาหารไว้ (แม้ไม่มีตัวหนังสือ)
-            out.add(NodeText("[$cls]", r.left, r.top, cls))
+
+        val t = node.text?.toString()?.trim()
+        val d = node.contentDescription?.toString()?.trim()
+
+        // ดึงทั้ง text และ contentDescription แยกกัน (เผื่อคนละค่า)
+        if (!t.isNullOrEmpty()) out.add(NodeText("T:$t", r.left, r.top, cls))
+        if (!d.isNullOrEmpty() && d != t) out.add(NodeText("D:$d", r.left, r.top, cls))
+
+        // มาร์ก scroll container (รายการอาหารมักอยู่ในนี้) แม้ไม่มีตัวหนังสือ
+        if (cls.contains("Recycler", true) || cls.contains("ScrollView", true) ||
+            cls.contains("ListView", true)) {
+            out.add(NodeText("[[${cls} childs=${node.childCount}]]", r.left, r.top, cls))
         }
         for (i in 0 until node.childCount) collect(node.getChild(i), out)
     }
