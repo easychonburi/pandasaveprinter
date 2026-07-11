@@ -45,6 +45,22 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("บันทึกเครื่องพิมพ์") { savePrinter() })
         root.addView(space(12))
 
+        // --- 3) เลือกแอปที่จะให้พิมพ์ ---
+        root.addView(TextView(this).apply {
+            text = "3) เลือกแอปที่จะให้พิมพ์"; textSize = 15f
+            setPadding(0, 12, 0, 4)
+        })
+        root.addView(switchRow("พิมพ์ออเดอร์ LINE MAN", Prefs.isLinemanOn(this)) {
+            Prefs.setLineman(this, it)
+        })
+        root.addView(switchRow("พิมพ์ออเดอร์ Grab", Prefs.isGrabOn(this)) {
+            Prefs.setGrab(this, it)
+        })
+        root.addView(switchRow("พิมพ์ออเดอร์ Shopee (เร็วๆ นี้)", Prefs.isShopeeOn(this)) {
+            Prefs.setShopee(this, it)
+        })
+        root.addView(space(16))
+
         root.addView(button("ทดสอบพิมพ์") { testPrint() })
         root.addView(space(8))
         root.addView(button("พิมพ์ออเดอร์ล่าสุดซ้ำ") { reprint() })
@@ -88,7 +104,6 @@ class MainActivity : AppCompatActivity() {
         val labels = if (devices.isEmpty()) listOf("— ไม่พบเครื่องที่จับคู่ —")
         else devices.map { it.first }
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        // เลือกค่าที่บันทึกไว้
         Prefs.getPrinterMac(this)?.let { saved ->
             val idx = devices.indexOfFirst { it.second == saved }
             if (idx >= 0) spinner.setSelection(idx)
@@ -173,6 +188,19 @@ class MainActivity : AppCompatActivity() {
         this.text = text
         setOnClickListener { onClick() }
     }
+
+    private fun switchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) =
+        Switch(this).apply {
+            text = label
+            textSize = 15f
+            isChecked = checked
+            setPadding(0, 20, 0, 20)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setOnCheckedChangeListener { _, isOn -> onChange(isOn) }
+        }
 
     private fun space(h: Int) = View(this).apply {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, h)
