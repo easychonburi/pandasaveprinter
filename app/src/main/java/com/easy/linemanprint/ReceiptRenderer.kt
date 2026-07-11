@@ -27,13 +27,13 @@ object ReceiptRenderer {
         }
 
     private val pHeader = p(48f, bold = true, center = true)   // ชื่อร้าน
-    private val pSub = p(23f, center = true)                   // สาขา / LINE MAN / เวลา
+    private val pSub = p(23f, center = true)                   // แพลตฟอร์ม / สาขา / เวลา
     private val pHuge = p(110f, bold = true, center = true)    // เลขออเดอร์ ใหญ่สุด
     private val pItem = p(36f, bold = true)                    // ★ เมนู + จำนวน เด่นสุด
-    private val pOptVal = p(29f, bold = true)                  // ★ ท็อปปิ้ง/ขนาด ที่เลือก
-    private val pOptLabel = p(25f)                             // หัวข้อตัวเลือก (ขนาด/ท็อปปิ้ง)
+    private val pOptVal = p(29f, bold = true)                  // ★ ท็อปปิ้ง/ขนาด/โน้ต ที่เลือก
+    private val pOptLabel = p(25f)                             // หัวข้อตัวเลือก
     private val pNote = p(22f)                                 // โน้ตเล็กๆ (ช้อนส้อม ฯลฯ)
-    private val pSmall = p(21f)                                // lmf / ยอดเงิน
+    private val pSmall = p(21f)                                // รหัส / ยอดเงิน
     private val pNet = p(26f, bold = true)                     // ยอดสุทธิ
     private val pCta = p(26f, bold = true, center = true)
     private val pImg = Paint().apply { isAntiAlias = false; isFilterBitmap = false }
@@ -91,7 +91,7 @@ object ReceiptRenderer {
         // --- หัวใบ ---
         els.add(TextEl("EASY หมี่ไก่ฉีก", pHeader, true))
         val sub = buildString {
-            append("LINE MAN")
+            append(o.platform)                                   // << โชว์ LINE MAN หรือ GRAB ตามต้นทาง
             if (o.branch.isNotEmpty()) append("  ·  สาขา ${o.branch}")
         }
         els.add(TextEl(sub, pSub, true))
