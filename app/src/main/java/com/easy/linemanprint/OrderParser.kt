@@ -3,7 +3,7 @@ package com.easy.linemanprint
 import kotlin.math.abs
 
 // node ข้อความ 1 ชิ้นที่อ่านได้จากหน้าจอ พร้อมตำแหน่ง
-data class NodeText(val text: String, val left: Int, val top: Int)
+data class NodeText(val text: String, val left: Int, val top: Int, val cls: String = "")
 
 object OrderParser {
 
