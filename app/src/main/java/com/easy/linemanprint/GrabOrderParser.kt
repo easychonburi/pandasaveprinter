@@ -60,15 +60,9 @@ object GrabOrderParser {
             }
             val dbg = ArrayList<OrderItem>()
             for ((i, n) in sorted.withIndex()) {
-    if (i >= 150) break
+                if (i >= 28) break
                 val tag = if (n.cls.isNotEmpty()) "[${n.cls}]" else ""
-                dbg.add(
-    OrderItem(
-        i + 1,
-        "$tag (${n.left},${n.top}) ${n.text}".take(80),
-        ""
-    )
-)
+                dbg.add(OrderItem(i + 1, "$tag ${n.text}".take(40), ""))
             }
             val verdict = when {
                 hasWeb -> "พบ WebView (มีลุ้น!)"
